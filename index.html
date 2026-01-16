@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Transaction Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #f4f6f8;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: -320px;
+      width: 300px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+      padding: 15px;
+      transition: 0.3s;
+      z-index: 1050;
+    }
+
+    .drawer.open {
+      left: 0;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      z-index: 1040;
+    }
+
+    .overlay.show {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOGIN -->
+  <div id="login" class="d-flex vh-100 justify-content-center align-items-center">
+    <div class="card p-4 shadow" style="width:300px">
+      <h5 class="mb-3 text-center">🔐 Login</h5>
+      <input type="password" id="password" class="form-control mb-2" placeholder="Enter password">
+      <button class="btn btn-primary w-100" onclick="handleLogin()">Login</button>
+      <div id="loginError" class="text-danger mt-2 text-center"></div>
+    </div>
+  </div>
+
+  <!-- DRAWER -->
+  <div id="overlay" class="overlay" onclick="closeDrawer()"></div>
+  <div id="drawer" class="drawer">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5>Add Sheet</h5>
+      <button class="btn btn-sm btn-outline-secondary" onclick="closeDrawer()">✕</button>
+    </div>
+    <input id="sheetName" class="form-control mb-2" placeholder="Sheet Display Name">
+    <input id="sheetUrl" class="form-control mb-2" placeholder="Google Sheet Share Link">
+    <button class="btn btn-success w-100" onclick="addSheet()">Add</button>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="d-none">
+
+    <nav class="navbar navbar-dark bg-dark px-3">
+      <button class="btn btn-outline-light me-2" onclick="openDrawer()">☰</button>
+
+      <select id="sheetSelect" class="form-select w-auto" onchange="loadSelectedSheet()"></select>
+
+      <div class="ms-auto bg-success text-white px-3 py-2 rounded">
+        Balance: <strong id="balanceCard">--</strong>
+      </div>
+    </nav>
+
+    <div class="container mt-4">
+      <input id="search" class="form-control mb-3" placeholder="Search by anything..." oninput="renderTable()">
+
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+          <thead class="table-dark">
+            <tr>
+              <th>Date</th>
+              <th>Time</th>
+              <th>From</th>
+              <th>Amount</th>
+              <th>TrxID</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    const PASSWORD_HASH =
+      "dc7897da62b97f518863cd7587dc5e9d9b0ce78441e2d6ba57e3d5582b90e370";
+
+    let transactions = [];
+
+    async function handleLogin() {
+      const passwordInput = document.getElementById("password");
+      const loginBox = document.getElementById("login");
+      const app = document.getElementById("app");
+      const loginError = document.getElementById("loginError");
+
+      const input = passwordInput.value.trim();
+
+      const buf = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(input)
+      );
+
+      const hash = Array.from(new Uint8Array(buf))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      if (hash === PASSWORD_HASH) {
+        loginBox.classList.add("d-none");   // 👈 hide login
+        app.classList.remove("d-none");    // 👈 show dashboard
+        loginError.innerText = "";
+        loadSheets();
+      } else {
+        loginError.innerText = "Wrong password";
+      }
+    }
+
+
+    function openDrawer() {
+      drawer.classList.add("open");
+      overlay.classList.add("show");
+    }
+    function closeDrawer() {
+      drawer.classList.remove("open");
+      overlay.classList.remove("show");
+    }
+
+    function extractId(url) {
+      const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      return m ? m[1] : null;
+    }
+
+    function addSheet() {
+      const name = sheetName.value;
+      const url = sheetUrl.value;
+      const id = extractId(url);
+      if (!name || !id) return alert("Invalid input");
+
+      const sheets = JSON.parse(localStorage.getItem("sheets") || "[]");
+      sheets.push({ name, id });
+      localStorage.setItem("sheets", JSON.stringify(sheets));
+      loadSheets();
+      closeDrawer();
+    }
+
+    function loadSheets() {
+      const sheets = JSON.parse(localStorage.getItem("sheets") || "[]");
+      sheetSelect.innerHTML = "";
+      sheets.forEach((s, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = s.name;
+        sheetSelect.appendChild(opt);
+      });
+      if (sheets.length) loadSelectedSheet();
+    }
+
+    function loadSelectedSheet() {
+      const sheets = JSON.parse(localStorage.getItem("sheets") || "[]");
+      const s = sheets[sheetSelect.value];
+      if (!s) return;
+
+      fetch(`https://docs.google.com/spreadsheets/d/${s.id}/gviz/tq?tqx=out:json`)
+        .then(r => r.text())
+        .then(t => {
+          const json = JSON.parse(t.substring(47).slice(0, -2));
+          parseMessages(json.table.rows);
+        });
+    }
+
+    function parseMessages(rows) {
+      transactions = [];
+      let latestBalance = "--";
+
+      rows.forEach(r => {
+        const text = r.c[0]?.v;
+        if (!text) return;
+
+        const m = text.match(
+          /Tk ([\d.]+).*from (\d+).*Balance Tk ([\d.]+).*TrxID (\w+).*at (\d{2}\/\d{2}\/\d{4}) (\d{2}:\d{2})/
+        );
+        if (!m) return;
+
+        latestBalance = m[3];
+
+        transactions.push({
+          date: m[5],
+          time: convertTime(m[6]),
+          from: m[2],
+          amount: m[1],
+          trxid: m[4],
+          balance: m[3]
+        });
+      });
+
+      balanceCard.innerText = "Tk " + latestBalance;
+      renderTable();
+    }
+
+    function convertTime(t) {
+      let [h, m] = t.split(":");
+      h = parseInt(h);
+      const ap = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return `${h}:${m} ${ap}`;
+    }
+
+    function renderTable() {
+      const q = search.value.toLowerCase();
+      tableBody.innerHTML = "";
+
+      transactions
+        .filter(t =>
+          Object.values(t).some(v =>
+            String(v).toLowerCase().includes(q)
+          )
+        )
+
+        .forEach(t => {
+          tableBody.innerHTML += `
+      <tr>
+        <td>${t.date}</td>
+        <td>${t.time}</td>
+        <td>${t.from}</td>
+        <td>${t.amount}</td>
+        <td>${t.trxid}</td>
+      </tr>`;
+        });
+    }
+  </script>
+</body>
+
+</html>

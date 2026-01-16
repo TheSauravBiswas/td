@@ -92,8 +92,8 @@
 
       <select id="sheetSelect" class="form-select w-auto" onchange="loadSelectedSheet()"></select>
 
-      <div class="ms-auto bg-success text-white px-3 py-2 rounded">
-        Balance: <strong id="balanceCard">--</strong>
+      <div class="ms-auto d-flex align-items-center">
+        <button class="btn btn-outline-light ms-2" onclick="refreshDashboard()">🔄 Refresh</button>
       </div>
     </nav>
 
@@ -109,6 +109,7 @@
               <th>From</th>
               <th>Amount</th>
               <th>TrxID</th>
+              <th>Balance</th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
@@ -417,14 +418,11 @@
           balance: m[3]
         });
 
-        // Keep latest balance (first transaction will be the latest after reversing)
-        latestBalance = m[3];
       });
 
       // Reverse the array so latest transactions are on top
       transactions.reverse();
 
-      balanceCard.innerText = "Tk " + latestBalance;
       renderTable();
     }
 
@@ -449,10 +447,30 @@
         <td>${t.from}</td>
         <td>${t.amount}</td>
         <td>${t.trxid}</td>
+        <td>${t.balance}</td>
       </tr>`;
         });
       tableBody.innerHTML = html;
     }
+
+    async function refreshDashboard(btn) {
+      btn = btn || event.target;
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Refreshing...' + createSpinner();
+
+      showOverlaySpinner(true);
+      try {
+        await loadMasterSheets();
+        const select = document.getElementById("sheetSelect");
+        if (select.value !== "") await loadSelectedSheet();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        showOverlaySpinner(false);
+      }
+    }
+
   </script>
 
 

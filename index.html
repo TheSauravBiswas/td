@@ -145,7 +145,7 @@ async function handleLogin() {
 
   const input = passwordInput.value.trim();
 
-  // Show button spinner ONLY
+  // Show login button spinner ONLY
   loginBtnText.innerText = "Logging in...";
   loginBtnSpinner.classList.remove("d-none");
   document.getElementById("loginBtn").disabled = true;
@@ -157,16 +157,21 @@ async function handleLogin() {
                       .join("");
 
     if(hash === PASSWORD_HASH){
-      // ✅ Hide login form, show app
-      loginBox.classList.add("d-none");
-      app.classList.remove("d-none");
+      // ✅ Hide login, show dashboard first
+      loginBox.style.display = "none"; 
+      app.style.display = "block";
+
       loginError.innerText = "";
 
-      // ✅ Now it's safe to show global overlay while fetching dashboard
+      // ✅ Only now show global overlay
       showLoader();
-      await loadMasterSheets(); // load sheets
-      loadSelectedSheet();      // load dashboard
-      hideLoader();             // hide overlay after everything loaded
+
+      // ✅ Load sheets and dashboard
+      await loadMasterSheets(); 
+      await loadSelectedSheet();
+
+      // ✅ Hide global overlay
+      hideLoader();
     } else {
       loginError.innerText = "Wrong password";
     }
@@ -174,6 +179,7 @@ async function handleLogin() {
     console.error(err);
     loginError.innerText = "Error logging in";
   } finally {
+    // Hide login button spinner
     loginBtnText.innerText = "Login";
     loginBtnSpinner.classList.add("d-none");
     document.getElementById("loginBtn").disabled = false;
@@ -367,4 +373,5 @@ function renderTable() {
 </script>
 </body>
 </html>
+
 

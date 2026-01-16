@@ -18,7 +18,7 @@ body { background-color: #f4f6f8; }
   left: -320px;
   width: 300px;
   height: 100%;
-  background: #ffffff;
+  background: #fff;
   box-shadow: 2px 0 10px rgba(0,0,0,0.15);
   padding: 15px;
   transition: 0.3s;
@@ -128,7 +128,7 @@ body { background-color: #f4f6f8; }
 
 <script>
 const PASSWORD_HASH = "dc7897da62b97f518863cd7587dc5e9d9b0ce78441e2d6ba57e3d5582b90e370";
-const MASTER_API = "https://script.google.com/macros/s/AKfycbxj2pfk-Tx2_BRSDQE4YRQi0sfBp5O3OJwIf-wERye_8zaJqTBz0UNXKA5sP0bJxpxg/exec"; // Replace with your Apps Script Web App URL
+const MASTER_API = "YOUR_WEB_APP_URL_HERE"; // Replace with your Apps Script Web App URL
 
 let transactions = [];
 let sheets = [];
@@ -145,7 +145,7 @@ async function handleLogin() {
 
   const input = passwordInput.value.trim();
 
-  // Show login button spinner ONLY
+  // Show button spinner only
   loginBtnText.innerText = "Logging in...";
   loginBtnSpinner.classList.remove("d-none");
   document.getElementById("loginBtn").disabled = true;
@@ -157,20 +157,18 @@ async function handleLogin() {
                       .join("");
 
     if(hash === PASSWORD_HASH){
-      // ✅ Hide login, show dashboard first
-      loginBox.style.display = "none"; 
+      // Hide login, show dashboard
+      loginBox.style.display = "none";
       app.style.display = "block";
-
       loginError.innerText = "";
 
-      // ✅ Only now show global overlay
+      // Allow browser to render dashboard
+      await new Promise(r => setTimeout(r, 50));
+
+      // Show global loader while fetching dashboard
       showLoader();
-
-      // ✅ Load sheets and dashboard
-      await loadMasterSheets(); 
+      await loadMasterSheets();
       await loadSelectedSheet();
-
-      // ✅ Hide global overlay
       hideLoader();
     } else {
       loginError.innerText = "Wrong password";
@@ -179,21 +177,16 @@ async function handleLogin() {
     console.error(err);
     loginError.innerText = "Error logging in";
   } finally {
-    // Hide login button spinner
     loginBtnText.innerText = "Login";
     loginBtnSpinner.classList.add("d-none");
     document.getElementById("loginBtn").disabled = false;
   }
 }
 
-
 // ================= DRAWER =================
 function openDrawer() { drawer.classList.add("open"); overlay.classList.add("show"); }
 function closeDrawer() { drawer.classList.remove("open"); overlay.classList.remove("show"); }
-function extractId(url) {
-  const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  return m ? m[1] : null;
-}
+function extractId(url) { const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/); return m ? m[1] : null; }
 
 // ================= LOADING =================
 function showLoader() { document.getElementById("loadingOverlay").style.display="flex"; }
@@ -210,9 +203,7 @@ async function loadMasterSheets() {
   } catch(err) {
     alert("Failed to load master sheet. Make sure it is public.");
     console.error(err);
-  } finally {
-    hideLoader();
-  }
+  } finally { hideLoader(); }
 }
 
 function renderSheetList() {
@@ -261,7 +252,7 @@ async function addOrUpdateSheet() {
     sheetName.value=""; sheetUrl.value=""; editingIndex=null;
 
     await loadMasterSheets();
-    loadSelectedSheet();
+    await loadSelectedSheet();
   } catch(err){
     alert("Failed to update sheet.");
     console.error(err);
@@ -285,7 +276,7 @@ async function deleteSheet(index, btn) {
   try {
     await fetch(MASTER_API,{ method:"POST", body: JSON.stringify({ action:"delete", index }) });
     await loadMasterSheets();
-    loadSelectedSheet();
+    await loadSelectedSheet();
   } catch(err){
     alert("Failed to delete sheet.");
     console.error(err);
@@ -373,5 +364,3 @@ function renderTable() {
 </script>
 </body>
 </html>
-
-

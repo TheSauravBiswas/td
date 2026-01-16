@@ -1,279 +1,461 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Transaction Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Transaction Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Bootstrap -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<style>
-body { background-color: #f4f6f8; }
+  <style>
+    body {
+      background-color: #f4f6f8;
+    }
 
-/* Drawer */
-.drawer {
-  position: fixed;
-  top: 0;
-  left: -320px;
-  width: 300px;
-  height: 100%;
-  background: #fff;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.15);
-  padding: 15px;
-  transition: 0.3s;
-  z-index: 1050;
-  overflow-y: auto;
-}
-.drawer.open { left: 0; }
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: -320px;
+      width: 300px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+      padding: 15px;
+      transition: 0.3s;
+      z-index: 1050;
+      overflow-y: auto;
+    }
 
-/* Overlay behind drawer */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  display: none;
-  z-index: 1040;
-}
-.overlay.show { display: block; }
-</style>
+    .drawer.open {
+      left: 0;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      z-index: 1040;
+    }
+
+    .overlay.show {
+      display: block;
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- LOGIN -->
-<div id="login" class="d-flex vh-100 justify-content-center align-items-center">
-  <div class="card p-4 shadow" style="width:300px">
-    <h5 class="mb-3 text-center">🔐 Login</h5>
-    <input type="password" id="password" class="form-control mb-2" placeholder="Enter password">
-    <button class="btn btn-primary w-100" id="loginBtn" onclick="handleLogin()">
-      <span id="loginBtnText">Login</span>
-      <span id="loginBtnSpinner" class="spinner-border spinner-border-sm d-none" style="margin-left:5px;"></span>
-    </button>
-    <div id="loginError" class="text-danger mt-2 text-center"></div>
-  </div>
-</div>
-
-<!-- DRAWER -->
-<div id="overlay" class="overlay" onclick="closeDrawer()"></div>
-<div id="drawer" class="drawer">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5>Manage Sheets</h5>
-    <button class="btn btn-sm btn-outline-secondary" onclick="closeDrawer()">✕</button>
+  <!-- LOGIN -->
+  <div id="login" class="d-flex vh-100 justify-content-center align-items-center">
+    <div class="card p-4 shadow" style="width:300px">
+      <h5 class="mb-3 text-center">🔐 Login</h5>
+      <input type="password" id="password" class="form-control mb-2" placeholder="Enter password">
+      <button class="btn btn-primary w-100" onclick="handleLogin()">Login</button>
+      <div id="loginError" class="text-danger mt-2 text-center"></div>
+    </div>
   </div>
 
-  <input id="sheetName" class="form-control mb-2" placeholder="Sheet Display Name">
-  <input id="sheetUrl" class="form-control mb-2" placeholder="Google Sheet Share Link">
-  <button class="btn btn-success w-100 mb-3" id="addBtn" onclick="addOrUpdateSheet()">
-    <span id="addBtnText">Add / Update Sheet</span>
-    <span id="addBtnSpinner" class="spinner-border spinner-border-sm d-none" style="margin-left:5px;"></span>
-  </button>
+  <!-- DRAWER -->
+  <div id="overlay" class="overlay" onclick="closeDrawer()"></div>
+  <div id="drawer" class="drawer">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5>Manage Sheets</h5>
+      <button class="btn btn-sm btn-outline-secondary" onclick="closeDrawer()">✕</button>
+    </div>
 
-  <div id="sheetList"></div>
-</div>
+    <div id="addSection">
+      <input id="sheetName" class="form-control mb-2" placeholder="Sheet Display Name">
+      <input id="sheetUrl" class="form-control mb-2" placeholder="Google Sheet Share Link">
+      <button class="btn btn-success w-100 mb-3" onclick="addSheet(this)">Add Sheet</button>
+    </div>
 
-<!-- APP -->
-<div id="app" class="d-none">
-<nav class="navbar navbar-dark bg-dark px-3">
-  <button class="btn btn-outline-light me-2" onclick="openDrawer()">☰</button>
+    <!-- Edit Sheet Section (hidden by default) -->
+    <div id="editSection" class="d-none">
+      <input id="editSheetName" class="form-control mb-2" placeholder="Edit Sheet Name">
+      <input id="editSheetUrl" class="form-control mb-2" placeholder="Edit Google Sheet Link">
+      <div class="d-flex justify-content-between mb-3">
+        <button class="btn btn-primary" onclick="submitEdit(this)">Submit Edit</button>
+        <button class="btn btn-secondary" onclick="discardEdit()">Discard</button>
+      </div>
+    </div>
 
-  <select id="sheetSelect" class="form-select w-auto" onchange="loadSelectedSheet()"></select>
-
-  <div class="ms-auto bg-success text-white px-3 py-2 rounded">
-    Balance: <strong id="balanceCard">--</strong>
+    <div id="sheetList"></div>
   </div>
-</nav>
 
-<div class="container mt-4">
-  <input id="search" class="form-control mb-3" placeholder="Search by anything..." oninput="renderTable()">
+  <!-- APP -->
+  <div id="app" class="d-none">
+    <nav class="navbar navbar-dark bg-dark px-3">
+      <button class="btn btn-outline-light me-2" onclick="openDrawer()">☰</button>
 
-  <div class="table-responsive">
-    <table class="table table-striped table-bordered">
-      <thead class="table-dark">
-        <tr>
-          <th>Date</th>
-          <th>Time</th>
-          <th>From</th>
-          <th>Amount</th>
-          <th>TrxID</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+      <select id="sheetSelect" class="form-select w-auto" onchange="loadSelectedSheet()"></select>
+
+      <div class="ms-auto bg-success text-white px-3 py-2 rounded">
+        Balance: <strong id="balanceCard">--</strong>
+      </div>
+    </nav>
+
+    <div class="container mt-4">
+      <input id="search" class="form-control mb-3" placeholder="Search by anything..." oninput="renderTable()">
+
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+          <thead class="table-dark">
+            <tr>
+              <th>Date</th>
+              <th>Time</th>
+              <th>From</th>
+              <th>Amount</th>
+              <th>TrxID</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
-</div>
-</div>
 
-<script>
-const PASSWORD_HASH = "dc7897da62b97f518863cd7587dc5e9d9b0ce78441e2d6ba57e3d5582b90e370";
+  <script>
+    // ================= CONFIG =================
+    const PASSWORD_HASH = "dc7897da62b97f518863cd7587dc5e9d9b0ce78441e2d6ba57e3d5582b90e370";
+    const MASTER_API = "https://script.google.com/macros/s/AKfycbxj2pfk-Tx2_BRSDQE4YRQi0sfBp5O3OJwIf-wERye_8zaJqTBz0UNXKA5sP0bJxpxg/exec";
 
-let sheets = [];
-let transactions = [];
-let editingIndex = null;
+    let transactions = [];
+    let sheets = [];
+    let editingIndex = null;
 
-// ================= LOGIN =================
-async function handleLogin() {
-  const passwordInput = document.getElementById("password");
-  const loginBox = document.getElementById("login");
-  const app = document.getElementById("app");
-  const loginError = document.getElementById("loginError");
-  const loginBtnText = document.getElementById("loginBtnText");
-  const loginBtnSpinner = document.getElementById("loginBtnSpinner");
-
-  loginBtnText.innerText = "Logging in...";
-  loginBtnSpinner.classList.remove("d-none");
-  document.getElementById("loginBtn").disabled = true;
-
-  try {
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(passwordInput.value.trim()));
-    const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
-
-    if(hash === PASSWORD_HASH){
-      loginBox.style.display = "none";
-      app.style.display = "block";
-      loginError.innerText = "";
-
-      await loadSheets();
-      await loadSelectedSheet();
-    } else {
-      loginError.innerText = "Wrong password";
+    // ================= SPINNER =================
+    function createSpinner() {
+      return '<span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>';
     }
-  } catch(err) {
-    loginError.innerText = "Error logging in";
-    console.error(err);
-  } finally {
-    loginBtnText.innerText = "Login";
-    loginBtnSpinner.classList.add("d-none");
-    document.getElementById("loginBtn").disabled = false;
-  }
-}
 
-// ================= DRAWER =================
-function openDrawer(){ drawer.classList.add("open"); overlay.classList.add("show"); }
-function closeDrawer(){ drawer.classList.remove("open"); overlay.classList.remove("show"); }
-function extractId(url){ const m=url.match(/\/d\/([a-zA-Z0-9-_]+)/); return m?m[1]:null; }
+    function showOverlaySpinner(show = true) {
+      let overlaySpinner = document.getElementById("overlaySpinner");
+      if (!overlaySpinner) {
+        overlaySpinner = document.createElement("div");
+        overlaySpinner.id = "overlaySpinner";
+        overlaySpinner.style = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 2000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    `;
+        overlaySpinner.innerHTML = '<div class="spinner-border text-light" role="status"></div>';
+        document.body.appendChild(overlaySpinner);
+      }
+      overlaySpinner.style.display = show ? "flex" : "none";
+    }
 
-// ================= SHEET MANAGEMENT =================
-function renderSheetList(){
-  const container=document.getElementById("sheetList");
-  container.innerHTML="";
-  sheets.forEach((s,i)=>{
-    const div=document.createElement("div");
-    div.className="d-flex justify-content-between align-items-center mb-2";
-    div.innerHTML=`<span>${s.name}</span>
+    // ================= LOGIN =================
+    async function handleLogin(btn) {
+      btn = btn || event.target;
+      const passwordInput = document.getElementById("password");
+      const loginBox = document.getElementById("login");
+      const app = document.getElementById("app");
+      const loginError = document.getElementById("loginError");
+
+      // Show spinner on button
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Logging in...' + createSpinner();
+
+      try {
+        const input = passwordInput.value.trim();
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+        const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+        if (hash === PASSWORD_HASH) {
+          loginBox.classList.add("d-none");
+          app.classList.remove("d-none");
+          loginError.innerText = "";
+          await loadMasterSheets();
+        } else {
+          loginError.innerText = "Wrong password";
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // ================= DRAWER =================
+    function openDrawer() { drawer.classList.add("open"); overlay.classList.add("show"); }
+    function closeDrawer() { drawer.classList.remove("open"); overlay.classList.remove("show"); }
+    function extractId(url) {
+      const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      return m ? m[1] : null;
+    }
+
+    // ================= SHEET MANAGEMENT =================
+    async function loadMasterSheets() {
+      showOverlaySpinner(true);
+      try {
+        const res = await fetch(MASTER_API);
+        sheets = await res.json();
+        renderSheetList();
+        loadSheetDropdown();
+      } catch (err) {
+        alert("Failed to load master sheet. Make sure it is public.");
+        console.error(err);
+      } finally {
+        showOverlaySpinner(false);
+      }
+    }
+
+    function renderSheetList() {
+      const container = document.getElementById("sheetList");
+      container.innerHTML = "";
+      sheets.forEach((s, i) => {
+        const div = document.createElement("div");
+        div.className = "d-flex justify-content-between align-items-center mb-2";
+        div.innerHTML = `
+      <span>${s.name}</span>
       <div>
         <button class="btn btn-sm btn-primary me-1" onclick="editSheet(${i})">Edit</button>
         <button class="btn btn-sm btn-danger" onclick="deleteSheet(${i}, this)">Delete</button>
-      </div>`;
-    container.appendChild(div);
-  });
-}
+      </div>
+    `;
+        container.appendChild(div);
+      });
+    }
 
-function editSheet(index){
-  const s = sheets[index];
-  sheetName.value = s.name;
-  sheetUrl.value = s.url;
-  editingIndex = index;
-}
+    function editSheet(index) {
+      const s = sheets[index];
+      editingIndex = index;
 
-function addOrUpdateSheet(){
-  const name = sheetName.value.trim();
-  const url = sheetUrl.value.trim();
-  if(!name || !url) return alert("Invalid input");
+      document.getElementById("addSection").classList.add("d-none");
+      const editSection = document.getElementById("editSection");
+      editSection.classList.remove("d-none");
 
-  if(editingIndex !== null){
-    sheets[editingIndex] = { name, url };
-    editingIndex = null;
-  } else {
-    sheets.push({ name, url });
-  }
+      const editName = document.getElementById("editSheetName");
+      const editUrl = document.getElementById("editSheetUrl");
 
-  sheetName.value=""; sheetUrl.value="";
-  renderSheetList();
-  loadSheetDropdown();
-  closeDrawer();
-}
+      editName.value = s.name || "";
+      editUrl.value = s.url ? (s.url.includes("/edit") ? s.url : `https://docs.google.com/spreadsheets/d/${s.id}/edit`) : "";
+    }
 
-function deleteSheet(index, btn){
-  if(!confirm("Delete this sheet?")) return;
-  sheets.splice(index,1);
-  renderSheetList();
-  loadSheetDropdown();
-  loadSelectedSheet();
-}
+    // Discard editing
+    function discardEdit() {
+      editingIndex = null;
+      document.getElementById("editSection").classList.add("d-none");
+      document.getElementById("addSection").classList.remove("d-none");
+      document.getElementById("editSheetName").value = "";
+      document.getElementById("editSheetUrl").value = "";
+    }
 
-// ================= DROPDOWN =================
-function loadSheetDropdown(){
-  const select=document.getElementById("sheetSelect");
-  select.innerHTML="";
-  sheets.forEach((s,i)=>{
-    const opt=document.createElement("option");
-    opt.value=i;
-    opt.textContent=s.name;
-    select.appendChild(opt);
-  });
-  if(sheets.length) loadSelectedSheet();
-}
+    // Add new sheet
+    async function addSheet(btn) {
+      const name = document.getElementById("sheetName").value.trim();
+      const url = document.getElementById("sheetUrl").value.trim();
+      if (!name || !url) return alert("Invalid input");
 
-// ================= LOAD TRANSACTIONS =================
-function loadSelectedSheet(){
-  const s = sheets[sheetSelect.value];
-  if(!s) return;
-  fetch(`https://docs.google.com/spreadsheets/d/${extractId(s.url)}/gviz/tq?tqx=out:json`)
-    .then(r=>r.text())
-    .then(t=>{
-      const json = JSON.parse(t.substring(47).slice(0,-2));
-      parseMessages(json.table.rows);
-    }).catch(err=>console.error(err));
-}
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Adding...' + createSpinner();
+      showOverlaySpinner(true);
 
-function parseMessages(rows){
-  transactions=[];
-  let latestBalance="--";
+      try {
+        await fetch(MASTER_API, {
+          method: "POST",
+          body: JSON.stringify({ action: "add", name, url })
+        });
+        document.getElementById("sheetName").value = "";
+        document.getElementById("sheetUrl").value = "";
+        await loadMasterSheets();
+      } catch (err) {
+        alert("Failed to add sheet: " + err.message);
+        console.error(err);
+      } finally {
+        showOverlaySpinner(false);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
 
-  rows.forEach(r=>{
-    const text=r.c[0]?.v;
-    if(!text) return;
-    const m=text.match(/Tk ([\d.]+).*from (\d+).*Balance Tk ([\d.]+).*TrxID (\w+).*at (\d{2}\/\d{2}\/\d{4}) (\d{2}:\d{2})/);
-    if(!m) return;
+    // Submit edit
+    async function submitEdit(btn) {
+      const name = document.getElementById("editSheetName").value.trim();
+      const url = document.getElementById("editSheetUrl").value.trim();
+      if (!name || !url) return alert("Invalid input");
 
-    latestBalance=m[3];
-    transactions.push({
-      date:m[5],
-      time:convertTime(m[6]),
-      from:m[2],
-      amount:m[1],
-      trxid:m[4],
-      balance:m[3]
-    });
-  });
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Updating...' + createSpinner();
+      showOverlaySpinner(true);
 
-  balanceCard.innerText = "Tk " + latestBalance;
-  renderTable();
-}
+      try {
+        await fetch(MASTER_API, {
+          method: "POST",
+          body: JSON.stringify({ action: "edit", index: editingIndex, name, url })
+        });
+        discardEdit();
+        await loadMasterSheets();
+      } catch (err) {
+        alert("Failed to update sheet: " + err.message);
+        console.error(err);
+      } finally {
+        showOverlaySpinner(false);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
 
-function convertTime(t){
-  let [h,m]=t.split(":");
-  h=parseInt(h);
-  const ap=h>=12?"PM":"AM";
-  h=h%12||12;
-  return `${h}:${m} ${ap}`;
-}
+    async function addOrUpdateSheet(btn) {
+      btn = btn || event.target;
+      const name = sheetName.value.trim();
+      const url = sheetUrl.value.trim();
+      if (!name || !url) return alert("Invalid input");
 
-function renderTable(){
-  const q = search.value.toLowerCase();
-  tableBody.innerHTML = "";
-  transactions.filter(t => Object.values(t).some(v => String(v).toLowerCase().includes(q)))
-    .forEach(t=>{
-      tableBody.innerHTML += `
-      <tr>
+      const body = editingIndex !== null
+        ? { action: "edit", index: editingIndex, name, url }
+        : { action: "add", name, url };
+
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = (editingIndex !== null ? 'Updating...' : 'Adding...') + createSpinner();
+
+      showOverlaySpinner(true);
+      try {
+        await fetch(MASTER_API, {
+          method: "POST",
+          body: JSON.stringify(body)
+        });
+
+        sheetName.value = "";
+        sheetUrl.value = "";
+        editingIndex = null;
+        await loadMasterSheets();
+        closeDrawer();
+      } catch (err) {
+        alert("Failed to update sheet: " + err.message);
+        console.error(err);
+      } finally {
+        showOverlaySpinner(false);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    async function deleteSheet(index, btn) {
+      if (!confirm("Are you sure you want to delete this sheet?")) return;
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Deleting...' + createSpinner();
+
+      showOverlaySpinner(true);
+      try {
+        await fetch(MASTER_API, {
+          method: "POST",
+          body: JSON.stringify({ action: "delete", index })
+        });
+        await loadMasterSheets();
+      } catch (err) {
+        alert("Failed to delete sheet: " + err.message);
+        console.error(err);
+      } finally {
+        showOverlaySpinner(false);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    function loadSheetDropdown() {
+      const select = document.getElementById("sheetSelect");
+      select.innerHTML = "";
+      sheets.forEach((s, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = s.name;
+        select.appendChild(opt);
+      });
+      if (sheets.length) loadSelectedSheet();
+    }
+
+    // ================= LOAD TRANSACTIONS =================
+    async function loadSelectedSheet() {
+      const s = sheets[sheetSelect.value];
+      if (!s) return;
+      showOverlaySpinner(true);
+      try {
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${extractId(s.url)}/gviz/tq?tqx=out:json`);
+        const t = await res.text();
+        const json = JSON.parse(t.substring(47).slice(0, -2));
+        parseMessages(json.table.rows);
+      } catch (err) {
+        alert("Failed to load transactions: " + err.message);
+        console.error(err);
+      } finally {
+        showOverlaySpinner(false);
+      }
+    }
+
+    // ================= PARSE & RENDER =================
+    function parseMessages(rows) {
+      transactions = [];
+      let latestBalance = "--";
+
+      rows.forEach(r => {
+        const text = r.c[0]?.v;
+        if (!text) return;
+
+        const m = text.match(
+          /Tk\s*([\d.]+).*from\s*(\d+).*Balance\s*Tk\s*([\d.]+).*TrxID\s*(\w+).*at\s*(\d{2}\/\d{2}\/\d{4})\s*(\d{2}:\d{2})/
+        );
+        if (!m) return;
+
+        transactions.push({
+          date: m[5],
+          time: convertTime(m[6]),
+          from: m[2],
+          amount: m[1],
+          trxid: m[4],
+          balance: m[3]
+        });
+
+        // Keep latest balance (first transaction will be the latest after reversing)
+        latestBalance = m[3];
+      });
+
+      // Reverse the array so latest transactions are on top
+      transactions.reverse();
+
+      balanceCard.innerText = "Tk " + latestBalance;
+      renderTable();
+    }
+
+
+    function convertTime(t) {
+      let [h, m] = t.split(":");
+      h = parseInt(h);
+      const ap = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return `${h}:${m} ${ap}`;
+    }
+
+    function renderTable() {
+      const q = search.value.toLowerCase();
+      let html = "";
+      transactions
+        .filter(t => Object.values(t).some(v => String(v).toLowerCase().includes(q)))
+        .forEach(t => {
+          html += `<tr>
         <td>${t.date}</td>
         <td>${t.time}</td>
         <td>${t.from}</td>
         <td>${t.amount}</td>
         <td>${t.trxid}</td>
       </tr>`;
-    });
-}
-</script>
+        });
+      tableBody.innerHTML = html;
+    }
+  </script>
+
+
 </body>
+
 </html>

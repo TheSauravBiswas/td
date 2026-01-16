@@ -143,45 +143,38 @@ async function handleLogin() {
   const loginBtnText = document.getElementById("loginBtnText");
   const loginBtnSpinner = document.getElementById("loginBtnSpinner");
 
-  const input = passwordInput.value.trim();
-
-  // Show button spinner only
+  // Show login button spinner only
   loginBtnText.innerText = "Logging in...";
   loginBtnSpinner.classList.remove("d-none");
   document.getElementById("loginBtn").disabled = true;
 
   try {
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
-    const hash = Array.from(new Uint8Array(buf))
-                      .map(b => b.toString(16).padStart(2,"0"))
-                      .join("");
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(passwordInput.value.trim()));
+    const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
 
-    if(hash === PASSWORD_HASH){
-      // Hide login, show dashboard
+    if(hash === PASSWORD_HASH) {
+      // ✅ Hide login box, show dashboard first
       loginBox.style.display = "none";
-      app.style.display = "block";
+      app.style.display = "block"; // dashboard is now visible
+
       loginError.innerText = "";
 
-      // Allow browser to render dashboard
-      await new Promise(r => setTimeout(r, 50));
-
-      // Show global loader while fetching dashboard
-      showLoader();
-      await loadMasterSheets();
+      // ✅ Now you can fetch sheets and show global overlay if needed
+      await loadMasterSheets();  // this can now safely show loader inside it
       await loadSelectedSheet();
-      hideLoader();
     } else {
       loginError.innerText = "Wrong password";
     }
-  } catch(err){
-    console.error(err);
+  } catch(err) {
     loginError.innerText = "Error logging in";
+    console.error(err);
   } finally {
     loginBtnText.innerText = "Login";
     loginBtnSpinner.classList.add("d-none");
     document.getElementById("loginBtn").disabled = false;
   }
 }
+
 
 // ================= DRAWER =================
 function openDrawer() { drawer.classList.add("open"); overlay.classList.add("show"); }
@@ -364,3 +357,4 @@ function renderTable() {
 </script>
 </body>
 </html>
+

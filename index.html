@@ -10,6 +10,8 @@
 
 <style>
 body { background-color: #f4f6f8; }
+
+/* Drawer */
 .drawer {
   position: fixed;
   top: 0;
@@ -24,6 +26,8 @@ body { background-color: #f4f6f8; }
   overflow-y: auto;
 }
 .drawer.open { left: 0; }
+
+/* Overlay */
 .overlay {
   position: fixed;
   inset: 0;
@@ -32,6 +36,19 @@ body { background-color: #f4f6f8; }
   z-index: 1040;
 }
 .overlay.show { display: block; }
+
+/* Loading Overlay */
+#loadingOverlay {
+  position: fixed;
+  inset:0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index:2000;
+  justify-content:center;
+  align-items:center;
+  color:white;
+  font-size:20px;
+}
 </style>
 </head>
 
@@ -57,7 +74,7 @@ body { background-color: #f4f6f8; }
 
   <input id="sheetName" class="form-control mb-2" placeholder="Sheet Display Name">
   <input id="sheetUrl" class="form-control mb-2" placeholder="Google Sheet Share Link">
-  <button class="btn btn-success w-100 mb-3" onclick="addOrUpdateSheet()">Add Sheet</button>
+  <button class="btn btn-success w-100 mb-3" onclick="addOrUpdateSheet()">Add / Update Sheet</button>
 
   <div id="sheetList"></div>
 </div>
@@ -94,9 +111,12 @@ body { background-color: #f4f6f8; }
 </div>
 </div>
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="d-flex">Loading...</div>
+
 <script>
 const PASSWORD_HASH = "dc7897da62b97f518863cd7587dc5e9d9b0ce78441e2d6ba57e3d5582b90e370";
-const MASTER_API = "https://script.google.com/macros/s/AKfycbxj2pfk-Tx2_BRSDQE4YRQi0sfBp5O3OJwIf-wERye_8zaJqTBz0UNXKA5sP0bJxpxg/exec";
+const MASTER_API = "YOUR_WEB_APP_URL_HERE"; // Replace with your Apps Script Web App URL
 
 let transactions = [];
 let sheets = [];
@@ -131,8 +151,13 @@ function extractId(url) {
   return m ? m[1] : null;
 }
 
+// ================= LOADING =================
+function showLoader() { document.getElementById("loadingOverlay").style.display="flex"; }
+function hideLoader() { document.getElementById("loadingOverlay").style.display="none"; }
+
 // ================= SHEET MANAGEMENT =================
 async function loadMasterSheets() {
+  showLoader();
   try {
     const res = await fetch(MASTER_API);
     sheets = await res.json();
@@ -141,22 +166,23 @@ async function loadMasterSheets() {
   } catch(err) {
     alert("Failed to load master sheet. Make sure it is public.");
     console.error(err);
+  } finally {
+    hideLoader();
   }
 }
 
 function renderSheetList() {
   const container = document.getElementById("sheetList");
   container.innerHTML = "";
-  sheets.forEach((s,i) => {
+  sheets.forEach((s,i)=>{
     const div = document.createElement("div");
-    div.className = "d-flex justify-content-between align-items-center mb-2";
-    div.innerHTML = `
+    div.className="d-flex justify-content-between align-items-center mb-2";
+    div.innerHTML=`
       <span>${s.name}</span>
       <div>
         <button class="btn btn-sm btn-primary me-1" onclick="editSheet(${i})">Edit</button>
         <button class="btn btn-sm btn-danger" onclick="deleteSheet(${i})">Delete</button>
-      </div>
-    `;
+      </div>`;
     container.appendChild(div);
   });
 }
@@ -164,7 +190,7 @@ function renderSheetList() {
 function editSheet(index) {
   const s = sheets[index];
   sheetName.value = s.name;
-  sheetUrl.value = `https://docs.google.com/spreadsheets/d/${s.id}/edit`;
+  sheetUrl.value = s.url; // ✅ fixed: show correct URL
   editingIndex = index;
 }
 
@@ -173,40 +199,50 @@ async function addOrUpdateSheet() {
   const url = sheetUrl.value.trim();
   if(!name || !url) return alert("Invalid input");
 
-  const body = editingIndex !== null 
-    ? { action: "edit", index: editingIndex, name, url } 
-    : { action: "add", name, url };
+  showLoader();
+  try {
+    const body = editingIndex !== null 
+      ? { action: "edit", index: editingIndex, name, url } 
+      : { action: "add", name, url };
 
-  await fetch(MASTER_API, {
-    method: "POST",
-    body: JSON.stringify(body)
-  });
+    await fetch(MASTER_API, { method:"POST", body: JSON.stringify(body) });
+    sheetName.value=""; sheetUrl.value=""; editingIndex=null;
 
-  sheetName.value = "";
-  sheetUrl.value = "";
-  editingIndex = null;
-  loadMasterSheets();
-  closeDrawer();
+    await loadMasterSheets(); // reload sheets
+    loadSelectedSheet(); // reload dashboard
+  } catch(err){
+    alert("Failed to update sheet.");
+    console.error(err);
+  } finally {
+    hideLoader();
+    closeDrawer();
+  }
 }
 
 async function deleteSheet(index) {
   if(!confirm("Are you sure you want to delete this sheet?")) return;
 
-  await fetch(MASTER_API, {
-    method: "POST",
-    body: JSON.stringify({ action: "delete", index })
-  });
-
-  loadMasterSheets();
+  showLoader();
+  try {
+    await fetch(MASTER_API,{ method:"POST", body: JSON.stringify({action:"delete", index}) });
+    await loadMasterSheets();
+    loadSelectedSheet();
+  } catch(err){
+    alert("Failed to delete sheet.");
+    console.error(err);
+  } finally {
+    hideLoader();
+  }
 }
 
+// ================= DROPDOWN =================
 function loadSheetDropdown() {
-  const select = document.getElementById("sheetSelect");
-  select.innerHTML = "";
+  const select=document.getElementById("sheetSelect");
+  select.innerHTML="";
   sheets.forEach((s,i)=>{
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = s.name;
+    const opt=document.createElement("option");
+    opt.value=i;
+    opt.textContent=s.name;
     select.appendChild(opt);
   });
   if(sheets.length) loadSelectedSheet();
@@ -214,59 +250,56 @@ function loadSheetDropdown() {
 
 // ================= LOAD TRANSACTIONS =================
 function loadSelectedSheet() {
-  const s = sheets[sheetSelect.value];
+  const s=sheets[sheetSelect.value];
   if(!s) return;
+  showLoader();
   fetch(`https://docs.google.com/spreadsheets/d/${extractId(s.url)}/gviz/tq?tqx=out:json`)
     .then(r=>r.text())
     .then(t=>{
       const json = JSON.parse(t.substring(47).slice(0,-2));
       parseMessages(json.table.rows);
-    });
+    }).finally(()=>hideLoader());
 }
 
 function parseMessages(rows) {
-  transactions = [];
-  let latestBalance = "--";
+  transactions=[];
+  let latestBalance="--";
 
   rows.forEach(r=>{
-    const text = r.c[0]?.v;
+    const text=r.c[0]?.v;
     if(!text) return;
-
-    const m = text.match(
-      /Tk ([\d.]+).*from (\d+).*Balance Tk ([\d.]+).*TrxID (\w+).*at (\d{2}\/\d{2}\/\d{4}) (\d{2}:\d{2})/
-    );
+    const m=text.match(/Tk ([\d.]+).*from (\d+).*Balance Tk ([\d.]+).*TrxID (\w+).*at (\d{2}\/\d{2}\/\d{4}) (\d{2}:\d{2})/);
     if(!m) return;
 
-    latestBalance = m[3];
+    latestBalance=m[3];
     transactions.push({
-      date: m[5],
-      time: convertTime(m[6]),
-      from: m[2],
-      amount: m[1],
-      trxid: m[4],
-      balance: m[3]
+      date:m[5],
+      time:convertTime(m[6]),
+      from:m[2],
+      amount:m[1],
+      trxid:m[4],
+      balance:m[3]
     });
   });
 
-  balanceCard.innerText = "Tk "+latestBalance;
+  balanceCard.innerText="Tk "+latestBalance;
   renderTable();
 }
 
 function convertTime(t){
-  let [h,m] = t.split(":");
+  let [h,m]=t.split(":");
   h=parseInt(h);
-  const ap = h>=12?"PM":"AM";
+  const ap=h>=12?"PM":"AM";
   h=h%12||12;
   return `${h}:${m} ${ap}`;
 }
 
 function renderTable() {
-  const q = search.value.toLowerCase();
+  const q=search.value.toLowerCase();
   tableBody.innerHTML="";
-  transactions
-    .filter(t=>Object.values(t).some(v=>String(v).toLowerCase().includes(q)))
+  transactions.filter(t=>Object.values(t).some(v=>String(v).toLowerCase().includes(q)))
     .forEach(t=>{
-      tableBody.innerHTML += `
+      tableBody.innerHTML+=`
       <tr>
         <td>${t.date}</td>
         <td>${t.time}</td>

@@ -14,18 +14,90 @@
       background-color: #f4f6f8;
     }
 
+    .navbar {
+      padding: 0;
+      /* Remove default navbar padding */
+      height: 60px;
+      /* Set navbar height */
+    }
+
+    .navbar-center {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .navbar-logo {
+      height: 80%;
+      /* Fill entire navbar height */
+      max-width: 80%;
+      width: auto;
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .navbar {
+        height: 50px;
+      }
+
+      .navbar-logo {
+        max-width: 70%;
+      }
+    }
+
+    .login-logo {
+      max-width: 200px;
+      /* adjust as needed */
+      height: auto;
+    }
+
     .drawer {
       position: fixed;
       top: 0;
       left: -320px;
       width: 300px;
       height: 100%;
-      background: #ffffff;
+      background: url("IMG_20260117_102749.png") no-repeat center center;
+      background-size: cover;
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
       padding: 15px;
       transition: 0.3s;
       z-index: 1050;
       overflow-y: auto;
+      color: #ffffff;
+    }
+
+    .drawer-logo {
+      max-width: 120px;
+      /* Adjust to your preference */
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      /* Center horizontally */
+      border-radius: 8px;
+      /* Optional: soft rounded corners */
+    }
+
+    .drawer-close-btn {
+      position: absolute;
+      top: 10px;
+      /* distance from top */
+      right: 10px;
+      /* distance from right */
+      z-index: 1100;
+      /* above drawer content */
+    }
+
+
+    .drawer>* {
+      position: relative;
+      z-index: 1;
     }
 
     .drawer.open {
@@ -51,7 +123,10 @@
   <!-- LOGIN -->
   <div id="login" class="d-flex vh-100 justify-content-center align-items-center">
     <div class="card p-4 shadow" style="width:300px">
-      <h5 class="mb-3 text-center">🔐 Login</h5>
+      <div class="text-center mb-3">
+        <img src="Nagad-Vertical-Logo.wine.png" alt="App Logo" class="login-logo">
+      </div>
+
       <input type="password" id="password" class="form-control mb-2" placeholder="Enter password">
       <button class="btn btn-primary w-100" onclick="handleLogin()">Login</button>
       <div id="loginError" class="text-danger mt-2 text-center"></div>
@@ -61,9 +136,15 @@
   <!-- DRAWER -->
   <div id="overlay" class="overlay" onclick="closeDrawer()"></div>
   <div id="drawer" class="drawer">
+
+    <button class="btn btn-sm btn-outline-secondary drawer-close-btn" onclick="closeDrawer()">✕</button>
+
+    <div class="text-center mb-3">
+      <img src="nagad_white_logo.png" alt="App Logo" class="drawer-logo">
+    </div>
+
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h5>Manage Sheets</h5>
-      <button class="btn btn-sm btn-outline-secondary" onclick="closeDrawer()">✕</button>
     </div>
 
     <div id="addSection">
@@ -91,6 +172,10 @@
       <button class="btn btn-outline-light me-2" onclick="openDrawer()">☰</button>
 
       <select id="sheetSelect" class="form-select w-auto" onchange="loadSelectedSheet()"></select>
+
+      <div class="navbar-center">
+        <img src="Nagad-Logo.wine.png" alt="App Logo" class="navbar-logo">
+      </div>
 
       <div class="ms-auto d-flex align-items-center">
         <button class="btn btn-outline-light ms-2" onclick="refreshDashboard()">🔄 Refresh</button>

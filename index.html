@@ -429,6 +429,11 @@
         document.getElementById("sheetName").value = "";
         document.getElementById("sheetUrl").value = "";
         await loadMasterSheets();
+        const newIndex = sheets.length - 1;
+        sheetSelect.value = newIndex;
+        drawerSheetSelect.value = newIndex;
+        await loadSelectedSheet();
+        closeDrawer();
       } catch (err) {
         alert("Failed to add sheet: " + err.message);
         console.error(err);
@@ -666,5 +671,6 @@
 </body>
 
 </html>
+
 
 

@@ -331,6 +331,11 @@
           app.classList.remove("d-none");
           loginError.innerText = "";
           await loadMasterSheets();
+          if (sheets.length > 0) {
+            sheetSelect.value = 0;
+            drawerSheetSelect.value = 0;
+            await loadSelectedSheet();
+          }
         } else {
           loginError.innerText = "Wrong password";
         }
@@ -547,11 +552,6 @@
       } else {
         document.getElementById("drawerDropdown").classList.add("d-none");
       }
-
-      if (sheets.length) {
-        if (window.innerWidth > 768) loadSelectedSheet();
-        else loadSelectedSheetFromDrawer();
-      }
     }
 
     function loadSelectedSheetFromDrawer() {
@@ -640,6 +640,9 @@
 
     async function refreshDashboard(btn) {
       btn = btn || event.target;
+
+      const selectedIndex = sheetSelect.value;
+
       const originalText = btn.innerHTML;
       btn.disabled = true;
       btn.innerHTML = 'Refreshing...' + createSpinner();
@@ -647,8 +650,9 @@
       showOverlaySpinner(true);
       try {
         await loadMasterSheets();
-        const select = document.getElementById("sheetSelect");
-        if (select.value !== "") await loadSelectedSheet();
+        sheetSelect.value = selectedIndex;
+        drawerSheetSelect.value = selectedIndex;
+        await loadSelectedSheet(); // ✅ now loads correct sheet
       } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -662,4 +666,5 @@
 </body>
 
 </html>
+
 

@@ -12,44 +12,54 @@
   <style>
     body {
       background-color: #f4f6f8;
+      padding-top: 60px;
     }
 
     .navbar {
+      position: fixed;
       padding: 0;
       /* Remove default navbar padding */
       height: 60px;
       /* Set navbar height */
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 2000;
     }
 
     .navbar-center {
       position: absolute;
       top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       justify-content: center;
       align-items: center;
       pointer-events: none;
+      /* lets clicks go to buttons */
+      height: 100%;
+      max-width: 60%;
+      /* prevents overlapping */
     }
 
     .navbar-logo {
       height: 80%;
-      /* Fill entire navbar height */
-      max-width: 80%;
       width: auto;
-      display: block;
+      max-width: 100%;
     }
 
-    @media (max-width: 768px) {
-      .navbar {
-        height: 50px;
+    /* Adjust for very small screens */
+    @media (max-width: 480px) {
+      .navbar-center {
+        max-width: 50%;
       }
 
       .navbar-logo {
-        max-width: 70%;
+        height: 90%;
+        /* slightly smaller to fit */
       }
     }
+
 
     .login-logo {
       max-width: 200px;
@@ -57,18 +67,37 @@
       height: auto;
     }
 
+    #login {
+      position: fixed;
+      /* stay in viewport */
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* full viewport height */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f4f6f8;
+      z-index: 3000;
+      /* above navbar and drawer */
+      overflow: hidden;
+      /* prevent scrollbars */
+    }
+
+
     .drawer {
       position: fixed;
       top: 0;
       left: -320px;
       width: 300px;
       height: 100%;
-      background: url("IMG_20260117_102749.png") no-repeat center center;
+      background: url('https://github.com/TheSauravBiswas/td/blob/main/IMG_20260117_102749.png?raw=true') no-repeat center center;
       background-size: cover;
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
       padding: 15px;
       transition: 0.3s;
-      z-index: 1050;
+      z-index: 2100;
       overflow-y: auto;
       color: #ffffff;
     }
@@ -109,11 +138,42 @@
       inset: 0;
       background: rgba(0, 0, 0, 0.4);
       display: none;
-      z-index: 1040;
+      z-index: 2050;
     }
 
     .overlay.show {
       display: block;
+    }
+
+    /* Mobile adjustments for navbar and drawer */
+    @media (max-width: 768px) {
+      #sheetSelect {
+        display: none;
+        /* hide navbar dropdown on mobile */
+      }
+
+      #drawerSheetSelect {
+        display: block;
+        margin-bottom: 1rem;
+        background-color: transparent;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+
+      #drawerSheetSelect option {
+        color: #fff;
+        /* white text */
+        background-color: #2c2c2c;
+        /* dark background */
+      }
+
+
+      .navbar button[onclick="refreshDashboard()"] {
+        padding: 0.25rem 0.5rem;
+        font-size: 1.1rem;
+        width: 38px;
+        height: 38px;
+      }
     }
   </style>
 </head>
@@ -140,8 +200,15 @@
     <button class="btn btn-sm btn-outline-secondary drawer-close-btn" onclick="closeDrawer()">✕</button>
 
     <div class="text-center mb-3">
-      <img src="nagad_white_logo.png" alt="App Logo" class="drawer-logo">
+      <img src="https://github.com/TheSauravBiswas/td/blob/main/nagad_white_logo.png?raw=true" alt="App Logo" class="drawer-logo">
     </div>
+
+    <div id="drawerDropdown" class="mb-3 d-none">
+      <select id="drawerSheetSelect" class="form-select" onchange="loadSelectedSheetFromDrawer()">
+        <!-- Options populated dynamically -->
+      </select>
+    </div>
+
 
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h5>Manage Sheets</h5>
@@ -178,7 +245,11 @@
       </div>
 
       <div class="ms-auto d-flex align-items-center">
-        <button class="btn btn-outline-light ms-2" onclick="refreshDashboard()">🔄 Refresh</button>
+        <button class="btn btn-outline-light ms-2" onclick="refreshDashboard(this)">
+          <span class="d-none d-md-inline">🔄 Refresh</span>
+          <span class="d-inline d-md-none">🔄</span>
+        </button>
+
       </div>
     </nav>
 
@@ -450,17 +521,46 @@
       }
     }
 
+
     function loadSheetDropdown() {
       const select = document.getElementById("sheetSelect");
+      const drawerSelect = document.getElementById("drawerSheetSelect");
+
       select.innerHTML = "";
+      drawerSelect.innerHTML = "";
+
       sheets.forEach((s, i) => {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = s.name;
-        select.appendChild(opt);
+        const opt1 = document.createElement("option");
+        opt1.value = i;
+        opt1.textContent = s.name;
+        select.appendChild(opt1);
+
+        const opt2 = document.createElement("option");
+        opt2.value = i;
+        opt2.textContent = s.name;
+        drawerSelect.appendChild(opt2);
       });
-      if (sheets.length) loadSelectedSheet();
+
+      // Show drawer dropdown only on mobile
+      if (window.innerWidth <= 768) {
+        document.getElementById("drawerDropdown").classList.remove("d-none");
+      } else {
+        document.getElementById("drawerDropdown").classList.add("d-none");
+      }
+
+      if (sheets.length) {
+        if (window.innerWidth > 768) loadSelectedSheet();
+        else loadSelectedSheetFromDrawer();
+      }
     }
+
+    function loadSelectedSheetFromDrawer() {
+      const drawerSelect = document.getElementById("drawerSheetSelect");
+      const index = drawerSelect.value;
+      sheetSelect.value = index; // sync with navbar dropdown
+      loadSelectedSheet();
+    }
+
 
     // ================= LOAD TRANSACTIONS =================
     async function loadSelectedSheet() {
